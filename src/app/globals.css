@@ -1,26 +1,122 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* Falcon Studio design tokens — light, warm, editorial (one confident orange accent). */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --color-paper: #ffffff;
+  --color-canvas: #f6f5f2;
+  --color-mist: #f1f0ed;
+  --color-mist-2: #e8e7e3;
+  --color-line: #ebeae6;
+  --color-ink: #0c0c0d;
+  --color-ink-2: #3a3a3c;
+  --color-muted: #77767a;
+  --color-faint: #a9a8ab;
+
+  --color-ember: #f26a21;
+  --color-ember-600: #e05812;
+  --color-ember-50: #fff3ec;
+  --color-ember-100: #ffe3d3;
+
+  /* playful family, used sparingly */
+  --color-fam-pink: #f2507b;
+  --color-fam-yellow: #f7c531;
+  --color-fam-blue: #2f6bff;
+  --color-fam-violet: #9a5cf0;
+  --color-fam-green: #20b37a;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.14) transparent;
+}
+
+::selection {
+  background: var(--color-ember-100);
+}
+
+.canvas-bg {
+  background-color: var(--color-canvas);
+  background-image: radial-gradient(rgba(12, 12, 13, 0.07) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.shimmer-text {
+  background: linear-gradient(90deg, #a9a8ab 0%, #0c0c0d 50%, #a9a8ab 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 1.6s linear infinite;
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+/* Slides being written get a moving warm outline */
+.generating::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 18px;
+  padding: 2px;
+  background: conic-gradient(from var(--angle, 0deg), #f26a21, #f7c531, #f2507b, #2f6bff, #f26a21);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spin-angle 2.4s linear infinite;
+  pointer-events: none;
+}
+
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes spin-angle {
+  to { --angle: 360deg; }
+}
+
+/* Landing hero slide fan */
+@keyframes float-up {
+  from { opacity: 0; transform: translateY(40px) rotate(var(--r)); }
+  to { opacity: 1; transform: translateY(0) rotate(var(--r)); }
+}
+.fan-card {
+  animation: float-up 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transform: rotate(var(--r));
+}
+.fan-card:hover {
+  transform: translateY(-14px) rotate(var(--r));
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+.fade-up {
+  animation: fade-up 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }

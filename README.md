@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Falcon Studio — AI slide generation on Vertex AI (Gemini)
 
-## Getting Started
+Chat on the left, live slides on the right. Each slide is real **HTML/CSS** (not an image), so anything can be
+edited precisely: click an element → *Rewrite with Gemini* / *Edit with AI* / double-click to type, or ask in chat.
 
-First, run the development server:
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+gcloud auth login                       # any account with Vertex AI access on koc-dev-app-falcon-0
+npm install
+npm run dev                             # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The server gets a token from the `gcloud` CLI (`GOOGLE_AUTH_MODE=adc` switches to Application Default Credentials).
+Project/models are configurable — see `.env.example`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## What it does
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Capability | How |
+|---|---|
+| Generate a deck from a short or detailed prompt | Planner (Gemini 3.1 Pro) → outline + theme + per-slide briefs → slides written **in parallel**, streamed live |
+| Iterate by chat | Planner decides create / update / delete / move ops; only affected slides are rewritten |
+| Theme from a website | Paste a URL — the server extracts colors, CSS variables, fonts, text and logo, then derives a theme |
+| Place uploaded images on a specific slide | Attach (button, paste or drag-drop) + "put this on slide 3" |
+| Rewrite selected text | Click an element (or highlight part of it) → *Rewrite with Gemini* with presets (shorter, formal, Arabic, …) |
+| Restyle an element | *Edit with AI* → returns new HTML for just that element |
+| Instant restyle | Theme panel (presets, colors, fonts, radius) — slides use CSS tokens, so no regeneration |
+| Generated imagery | Planner can request images (`gemini-2.5-flash-image`) when useful |
+| Code view, undo/redo, present, export | Per-slide HTML editor, ⌘Z / ⇧⌘Z, fullscreen presenter, standalone HTML and PDF (print) |
 
-## Learn More
+Decks are saved in the browser (IndexedDB).
 
-To learn more about Next.js, take a look at the following resources:
+## Architecture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+  app/api/agent/route.ts      NDJSON stream of agent events (status, theme, slide-partial, slide, …)
+  app/api/edit/route.ts       fast element-scoped rewrite/edit (Gemini 3.5 Flash)
+  lib/server/agent.ts         planner → image gen → parallel slide writers (+ plan repair)
+  lib/server/design-skill.ts  the "design skill": canvas contract, typography, 13 layout archetypes, craft rules
+  lib/server/site-brand.ts    website → brand tokens + logo
+  lib/server/gemini.ts        Vertex client, auth, retries
+  lib/slide-html.ts           sandboxed iframe shell + selection bridge, export builders
+  components/                 Studio, ChatPanel, Canvas, SelectionToolbar, ThemePanel, PresentMode, Landing
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Slide contract:** one `<section class="slide">` at 1920×1080, styled only through theme tokens
+(`var(--accent)`, `var(--font-heading)` …). Images use `asset:ID` placeholders that are resolved client-side. Every
+element gets a `data-eid`, which is what makes click-to-edit and element-scoped AI edits possible.
 
-## Deploy on Vercel
+**Quality lever:** `design-skill.ts`. Add brand-specific rules or new layout archetypes there.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy (Cloud Run)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+gcloud run deploy falcon-studio --source . --project koc-dev-app-falcon-0 --region me-central1 \
+  --no-allow-unauthenticated --timeout 300 --memory 1Gi
+```
+
+The Cloud Run service account needs `roles/aiplatform.user`. On Cloud Run, ADC is used automatically.
